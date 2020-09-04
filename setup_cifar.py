@@ -16,8 +16,8 @@ import urllib.request
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
-from tebsorflow.keras.layers import Conv2D, MaxPooling2D
-from tensorflow.keras.utils import np_utils
+from tensorflow.keras.layers import Conv2D, MaxPooling2D
+#from tensorflow.keras.utils import np_utils
 from tensorflow.keras.models import load_model
 
 # 这一坨是啥???
@@ -53,6 +53,11 @@ def load_batch(fpath):
         arr = np.fromstring(f[i*size:(i+1)*size],dtype=np.uint8)
         lab = np.identity(10)[arr[0]]
         img = arr[1:].reshape((3,32,32)).transpose((1,2,0)) # transpose 相当于换了一个角度看图片
+        if i == 0:
+            print(arr[1:].shape)
+            print(arr[1:])
+            print(arr[1:].reshape((3, 32, 32)))
+            print(arr[1:].reshape((3, 32, 32)).transpose((1,2,0)))
 
         labels.append(lab)
         images.append((img/255)-.5)

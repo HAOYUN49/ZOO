@@ -8,15 +8,16 @@
 
 
 import numpy as np
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras.optimizers import SGD
-
 import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
+from tensorflow.keras.layers import Conv2D, MaxPooling2D
+from tensorflow.keras.optimizers import SGD
+
 from setup_mnist import MNIST
 from setup_cifar import CIFAR
-import os
+import os #operating system interface functions
 
 def train(data, file_name, params, num_epochs=50, batch_size=128, train_temp=1, init=None):
     """
@@ -48,11 +49,12 @@ def train(data, file_name, params, num_epochs=50, batch_size=128, train_temp=1, 
     model.add(Dense(10))
     
     if init != None:
-        model.load_weights(init)
+        model.load_weights(init + ".h5") #load_weights??? (whywhywhy) why don't load_model directly???
 
     def fn(correct, predicted):
         return tf.nn.softmax_cross_entropy_with_logits(labels=correct,
-                                                       logits=predicted/train_temp)
+                                                       logits=predicted/train_temp) #train_tempreture (denfensive distillation)
+        #classification function: 计算logits和labels的softmax交叉熵(???)
 
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     
@@ -62,13 +64,13 @@ def train(data, file_name, params, num_epochs=50, batch_size=128, train_temp=1, 
     
     model.fit(data.train_data, data.train_labels,
               batch_size=batch_size,
-              validation_data=(data.validation_data, data.validation_labels),
               nb_epoch=num_epochs,
+              validation_data=(data.validation_data, data.validation_labels),
               shuffle=True)
     
 
     if file_name != None:
-        model.save(file_name)
+        model.save(file_name + ".h5")
 
     return model
 
@@ -90,10 +92,9 @@ def train_distillation(data, file_name, params, num_epochs=50, batch_size=128, t
 
     # evaluate the labels at temperature t
     predicted = teacher.predict(data.train_data)
-    with tf.Session() as sess:
-        y = sess.run(tf.nn.softmax(predicted/train_temp))
-        print(y)
-        data.train_labels = y
+    y = tf.nn.softmax(predicted/train_temp)
+    print(y)
+    data.train_labels = y
 
     # train the student model at temperature t
     student = train(data, file_name, params, num_epochs, batch_size, train_temp,

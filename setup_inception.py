@@ -36,6 +36,7 @@ to use this script to perform image recognition.
 
 https://tensorflow.org/tutorials/image_recognition/
 """
+#GraphDef 可以理解为一种数据结构，是python代码描述的graph中序列化得到的图，是由许多叫做NodeDef（可理解成数据结构）的protocol buffer组成
 
 #from __future__ import absolute_import #绝对引入和相对引入
 #from __future__ import division
@@ -46,7 +47,9 @@ import re # 正则表达式
 import sys 
 import random
 import tarfile #解压缩文件
-import scipy.misc #图像处理
+#import scipy.misc #图像处理 已被弃用
+import imageio
+from PIL import Image
 
 import numpy as np
 from six.moves import urllib
@@ -56,7 +59,7 @@ import argparse
 # pylint: disable=line-too-long
 DATA_URL = 'http://jaina.cs.ucdavis.edu/datasets/adv/imagenet/inception_v3_2016_08_28_frozen.tar.gz'
 # pylint: enable=line-too-long
-
+# 全局变量
 
 class NodeLookup(object):
   """Converts integer node ID's to human readable labels."""
@@ -111,7 +114,7 @@ def create_graph():
     #  if "tensor_content" not in line:
     #    print(line)
     _ = tf.import_graph_def(graph_def, name='')
-
+# where returns a saver???
 
 def run_inference_on_image(image):
   """Runs inference on an image. (Not updated, not working for inception v3 20160828)
@@ -162,8 +165,8 @@ def run_inference_on_image(image):
       print('%s (score = %.5f)' % (human_string, score))
 
 class InceptionModelPrediction:
-  def __init__(self, sess, use_log = False):
-    self.sess = sess
+  def __init__(self, use_log = False):
+    #self.sess = sess
     self.use_log = use_log
     if self.use_log:
       output_name = 'InceptionV3/Predictions/Softmax:0'
@@ -239,13 +242,13 @@ def maybe_download_and_extract():
   filename = DATA_URL.split('/')[-1]
   filepath = os.path.join(dest_directory, filename)
   if not os.path.exists(filepath):
-    def _progress(count, block_size, total_size):
+    def _progress(count, block_size, total_size): #_表示这个函数受保护，但并不是真正的受保护权限
       sys.stdout.write('\r>> Downloading %s %.1f%%' % (
           filename, float(count * block_size) / float(total_size) * 100.0))
       sys.stdout.flush()
-    filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath, _progress)
+    filepath, _ = urllib.request.urlretrieve(DATA_URL, filepath, _progress) #_作为一个临时名称，对实值不感兴趣
     print()
-    statinfo = os.stat(filepath)
+    statinfo = os.stat(filepath) #os.stat 用于在给定的路径上执行一个系统stat的调用  
     print('Succesfully downloaded', filename, statinfo.st_size, 'bytes.')
   tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
@@ -256,30 +259,29 @@ def main(_):
            os.path.join(FLAGS.model_dir, 'cropped_panda.jpg'))
   # run_inference_on_image(image)
   create_graph()
-  with tf.Session() as sess:
-    dat = np.array(scipy.misc.imresize(scipy.misc.imread(image),(299,299)), dtype = np.float32)
-    dat /= 255.0
-    dat -= 0.5
-    # print(dat)
-    model = InceptionModelPrediction(sess, True)
-    predictions = model.predict(dat)
-    # Creates node ID --> English string lookup.
-    node_lookup = NodeLookup()
-    top_k = predictions.argsort()#[-FLAGS.num_top_predictions:][::-1]
-    for node_id in top_k:
-      print('id',node_id)
-      human_string = node_lookup.id_to_string(node_id)
-      score = predictions[node_id]
-      print('%s (score = %.5f)' % (human_string, score))
+  dat = np.array(Image.fromarray(imageio.imread(image)).resize((299,299)), dtype = np.float32)
+  dat /= 255.0
+  dat -= 0.5
+  # print(dat)
+  model = InceptionModelPrediction(True)
+  predictions = model.predict(dat)
+  # Creates node ID --> English string lookup.
+  Node_lookup = NodeLookup()
+  top_k = predictions.argsort()#[-FLAGS.num_top_predictions:][::-1]
+  for node_id in top_k:
+  print('id',node_id)
+  human_string = node_lookup.id_to_string(node_id)
+  score = predictions[node_id]
+  print('%s (score = %.5f)' % (human_string, score))
 
 
 def readimg(ff):
   f = "../imagenetdata/imgs/"+ff
-  img = scipy.misc.imread(f)
+  img = imageio.imread(f)
   # skip small images (image should be at least 299x299)
   if img.shape[0] < 299 or img.shape[1] < 299:
     return None
-  img = np.array(scipy.misc.imresize(img,(299,299)),dtype=np.float32)/255-.5
+  img = np.array(Image.fromarray(img).resize((299,299)),dtype=np.float32)/255-.5
   if img.shape != (299, 299, 3):
     return None
   return [img, int(ff.split(".")[0])]
@@ -287,8 +289,9 @@ def readimg(ff):
 class ImageNet:
   def __init__(self):
     from multiprocessing import Pool
-    pool = Pool(8)
+    pool = Pool(8) # 多进程（可根据自己的电脑情况调整数量）
     file_list = sorted(os.listdir("../imagenetdata/imgs/"))
+    #os.listdir:返回指定路径下的文件和文件夹列表
     random.shuffle(file_list)
     r = pool.map(readimg, file_list[:200])
     print(file_list[:200])
@@ -300,7 +303,7 @@ class ImageNet:
 
   
 
-# ??? tensorflow v2 怎么实现
+# ??? tensorflow v2 怎么实现: use argparse to replace tf.app.flags
 if __name__ == '__main__':
   #FLAGS = tf.app.flags.FLAGS
   # classify_image_graph_def.pb:
@@ -315,19 +318,19 @@ if __name__ == '__main__':
    #   """imagenet_synset_to_human_label_map.txt, and """
    #   """imagenet_2012_challenge_label_map_proto.pbtxt.""")
   #tf.app.flags.DEFINE_string('image_file', '',
-			     """Absolute path to image file.""")
+	#		     """Absolute path to image file.""")
   #tf.app.flags.DEFINE_integer('num_top_predictions', 5,
-			      """Display this many predictions.""")
+	#		      """Display this many predictions.""")
   #tf.app.run()
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-model_dir', type=str, default="tmp/imagenet",
+  parser.add_argument('--model_dir', type=str, default="tmp/imagenet", #tmp是临时文件夹，会被清空
       help="""Path to classify_image_graph_def.pb, """
       """imagenet_synset_to_human_label_map.txt, and """
       """imagenet_2012_challenge_label_map_proto.pbtxt.""")
-  parser.add_argument('-image_file', type=str, default='',
+  parser.add_argument('--image_file', type=str, default='',
       help="""Absolute path to image file.""")
-  parser.add_argument('-num_top_predictions', type=int, default=5,
+  parser.add_argument('--num_top_predictions', type=int, default=5,
       help="""Display this many predictions.""")
 
   FLAGS = parser.parse_args()

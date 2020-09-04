@@ -16,7 +16,7 @@ import urllib.request
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.layers import Conv2D, MaxPooling2D
-from tensorflow.keras.utils import np_utils
+#from tensorflow.keras.utils import np_utils
 from tensorflow.keras.models import load_model
 
 def extract_data(filename, num_images):
@@ -32,7 +32,17 @@ def extract_labels(filename, num_images):
     with gzip.open(filename) as bytestream:
         bytestream.read(8)
         buf = bytestream.read(1 * num_images)
+        #print(len(buf))
         labels = np.frombuffer(buf, dtype=np.uint8)
+        #print(labels.shape)
+        #interim = labels[:, None]
+        #print(interim.shape)
+        #print(np.arange(10))
+        #print(labels[:, None][0])
+        #print(np.arange(10) == labels[:, None][0])
+        #interim = (np.arange(10) == labels[:, None])
+        #print(interim.shape)
+        #print(interim)
     return (np.arange(10) == labels[:, None]).astype(np.float32) # None means numpy.newaxis
 
 class MNIST:
