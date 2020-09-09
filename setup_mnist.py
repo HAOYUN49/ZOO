@@ -71,7 +71,7 @@ class MNIST:
 
 
 class MNISTModel:
-    def __init__(self, restore = None, session=None, use_log=False):
+    def __init__(self, restore = None, use_log=False):
         self.num_channels = 1
         self.image_size = 28
         self.num_labels = 10 #one channel, size 28*28*1
